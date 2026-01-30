@@ -3,6 +3,7 @@ package ab3.impl.Siarheyeu;
 import ab3.Ab3;
 import ab3.TreeNode;
 import ab3.TreeDecomposition;
+import com.sun.source.tree.Tree;
 
 import java.util.HashSet;
 
@@ -86,8 +87,24 @@ public class Ab3Impl implements Ab3 {
 
 	@Override
 	public int getWidth(TreeDecomposition td) {
+		int maxBagSize = 0;
 
-		return -1;
+		HashSet<TreeNode> stack = new HashSet<>();
+		stack.add(td.root);//Würzelknote addieren
+
+		while (!stack.isEmpty()) {
+			TreeNode cur = stack.iterator().next();
+			stack.remove(cur);
+
+			if (cur.bag == null) continue;
+
+			maxBagSize = Math.max(maxBagSize, cur.bag.size());
+
+			for (TreeNode child : cur.children) {
+				stack.add(child);
+			}
+		}
+		return maxBagSize - 1;
 	}
 
 	@Override
