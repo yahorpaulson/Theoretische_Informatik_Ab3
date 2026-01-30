@@ -1,4 +1,4 @@
-package ab3.impl.Nachnamen;
+package ab3.impl.Siarheyeu;
 
 import ab3.Ab3;
 import ab3.TreeNode;
@@ -53,13 +53,40 @@ public class Ab3Impl implements Ab3 {
 
 	@Override
 	public boolean isValid(TreeDecomposition td) {
-		// TODO Auto-generated method stub
-		return false;
+		if(td==null || td.graph == null || td.root == null){
+			return false;
+		} // initial check
+
+		HashSet<Integer> covered = new HashSet<>();
+		HashSet<TreeNode> stack = new HashSet<>();
+		stack.add(td.root);
+
+		while (!stack.isEmpty()) {
+			TreeNode cur = stack.iterator().next();
+			stack.remove(cur);
+
+			if (cur == null || cur.bag == null || cur.children == null) return false;
+
+
+			covered.addAll(cur.bag);
+
+			for (TreeNode child : cur.children) {
+				if(child == null) return false;
+				stack.add(child); //fügen Kinderknoten im Stack hinzu
+			}
+
+			int n = td.graph.length;
+			for (int v = 0; v < n; v++) {
+				if (!covered.contains(v)) return false;
+			} //alle Knoten des Graphen sind in den bags enthalten
+		}
+
+		return true;
 	}
 
 	@Override
 	public int getWidth(TreeDecomposition td) {
-		// TODO Auto-generated method stub
+
 		return -1;
 	}
 
