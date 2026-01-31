@@ -3,8 +3,8 @@ package ab3.impl.Siarheyeu;
 import ab3.Ab3;
 import ab3.TreeNode;
 import ab3.TreeDecomposition;
-import com.sun.source.tree.Tree;
 
+import java.util.Arrays;
 import java.util.HashSet;
 
 public class Ab3Impl implements Ab3 {
@@ -12,29 +12,196 @@ public class Ab3Impl implements Ab3 {
 	@Override
 	public String[] matriculationNumbers() {
 
-		//return new String[] { "1234567", "2345678", "3456789" };
 		return new String[]{"11930943"};
 	}
+
+
+	private TreeDecomposition bestExact = null;
+	private int bestWidth;
+
 
 	@Override
 	public TreeDecomposition decomposeExact(boolean[][] graph) {
 
-		HashSet<Integer> bag = new HashSet<>(graph.length);
-		TreeNode root = new TreeNode();
+		if (graph == null) return null;
 
-		root.bag = bag;
+		bestExact = null;
+		bestWidth = Integer.MAX_VALUE;
 
-		for (int i= 0; i < graph.length; i++){
-			root.bag.add(i);
+		int [] vertices = new int[graph.length];
+		for (int i = 0; i < vertices.length; i++){
+			vertices[i] = i;
 		}
+
+		permutations(vertices, 0 ,graph);
+		return bestExact;
+	}
+
+	private void permutations(int[] arr, int idx, boolean[][] graph) {
+
+
+		if (idx == arr.length) {
+			TreeDecomposition td = buildFromOrder(graph, arr);
+			int w = getWidth(td);
+
+			if (w < bestWidth) {
+				bestWidth = w;
+				bestExact = td;
+			}
+			return;
+		}
+
+		for (int i = idx; i < arr.length; i++) {
+
+			// swap
+			swap(arr, i, idx);
+
+			permutations(arr, idx + 1, graph);
+
+			// swap back
+			swap(arr, i, idx);
+		}
+	}
+
+	//methode nimmt eine Permutation
+	private TreeDecomposition buildFromOrder(boolean[][] graph, int[] order) {
+
+		boolean[][] newGraph = new boolean[graph.length][graph.length];
+
+		for (int i = 0; i < graph.length; i++) {
+            System.arraycopy(graph[i], 0, newGraph[i], 0, graph.length);
+		}
+
+
+		TreeNode root = null;
+		TreeNode prev = null;
+
+		for (int v : order) {
+
+			TreeNode node = new TreeNode();
+
+			// bag = v und alle Nachbarn
+			node.bag.add(v);
+			for (int u = 0; u < newGraph.length; u++) {
+				if (newGraph[v][u]) node.bag.add(u);
+			}
+
+
+			if (root == null) root = node;
+			if (prev != null) {
+				prev.children.add(node);
+				node.parent = prev;
+			}
+			prev = node;
+
+			// aus dem Graph löschen
+			for (int i = 0; i < newGraph.length; i++) {
+				newGraph[v][i] = false;
+				newGraph[i][v] = false;
+			}
+		}
+
 		return new TreeDecomposition(graph, root);
 	}
 
+
+	private void swap(int [] arr, int first, int second) {
+
+		int tmp = arr[first];
+		arr[first] = arr[second];
+		arr[second] = tmp;
+	}
+
+
 	@Override
 	public TreeDecomposition decomposeFast(boolean[][] graph) {
-		// TODO Auto-generated method stub
-		return null;
+
+		//Kopie vom ursprünglichen Graph wird erstellt
+		boolean[][] newGraph = new boolean[graph.length][graph.length];
+
+		for (int i = 0; i < graph.length; i++) {
+			System.arraycopy(graph[i], 0, newGraph[i], 0, graph.length);
+		}
+
+		boolean[] alive = new boolean[newGraph.length];
+        Arrays.fill(alive, true); //true - vertices sind im Graph, false - gelöscht
+
+		TreeNode root = null;
+		TreeNode prev = null;
+
+
+		for(int i = 0; i < alive.length; i++) {
+			//Vertice mit niedrigsten Anzahl den Nachbarn
+			int v = pickMinDegreeVertex(newGraph, alive);
+
+			TreeNode node = new TreeNode();
+			node.bag.add(v); //Würzel hinzufügen
+
+			//Nachbarn holen
+			for (int u = 0; u < alive.length; u++) {
+				if (alive[u] && newGraph[v][u]) {
+					node.bag.add(u);
+				}
+			}
+
+			//eine Kette erstellen
+			if (root == null) {
+				root = node;
+			}
+			if (prev != null) {
+				prev.children.add(node);
+				node.parent = prev;
+			}
+			prev = node;
+
+			//allen Nachbarn zusammenbinden
+			for (int j = 0; j < alive.length; j++) {
+				for (int k = j + 1; k < alive.length; k++) {
+					if (alive[j] && newGraph[v][k]) {
+						newGraph[j][k] = true;
+						newGraph[k][j] = true;
+					}
+				}
+			}
+
+			//löschen v
+			alive[v] = false;
+
+			for (int t = 0; t < alive.length; t++) {
+				newGraph[v][t] = false;
+				newGraph[t][v] = false;
+			}
+		}
+		if (root == null) {
+			root = new TreeNode();
+		}
+		return new TreeDecomposition(graph, root);
+
 	}
+
+	private int pickMinDegreeVertex(boolean[][] g, boolean[] alive) {
+		int n = g.length;
+		int bestV = -1;
+		int bestDeg = Integer.MAX_VALUE;
+
+		for (int v = 0; v < n; v++) {
+			if (!alive[v]) continue;
+
+			int deg = 0;
+			//Anzahl noch nicht gelöschte Nachbarn
+			for (int u = 0; u < n; u++) {
+				if (alive[u] && g[v][u]) deg++;
+			}
+
+			//Vertice mit niedrigste Grad merken
+			if (deg < bestDeg) {
+				bestDeg = deg;
+				bestV = v;
+			}
+		}
+		return bestV;
+	}
+
 
 	@Override
 	public TreeDecomposition decomposeRandom(boolean[][] graph, int samples) {
@@ -71,16 +238,16 @@ public class Ab3Impl implements Ab3 {
 
 			covered.addAll(cur.bag);
 
+
 			for (TreeNode child : cur.children) {
-				if(child == null) return false;
+				//if(child == null) return false;
 				stack.add(child); //fügen Kinderknoten im Stack hinzu
 			}
-
-			int n = td.graph.length;
-			for (int v = 0; v < n; v++) {
-				if (!covered.contains(v)) return false;
-			} //alle Knoten des Graphen sind in den bags enthalten
 		}
+		int n = td.graph.length;
+		for (int v = 0; v < n; v++) {
+			if (!covered.contains(v)) return false;
+		} //alle Knoten des Graphen sind in den bags enthalten
 
 		return true;
 	}
@@ -100,16 +267,16 @@ public class Ab3Impl implements Ab3 {
 
 			maxBagSize = Math.max(maxBagSize, cur.bag.size());
 
-			for (TreeNode child : cur.children) {
-				stack.add(child);
-			}
+            stack.addAll(cur.children);
 		}
 		return maxBagSize - 1;
 	}
 
 	@Override
 	public boolean hasTreewidthBound(boolean[][] graph, int width) {
-		// TODO Auto-generated method stub
-		return false;
+		TreeDecomposition td = decomposeExact(graph);
+		if (td == null) return false;
+
+		return getWidth(td) <= width;
 	}
 }

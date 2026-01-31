@@ -59,6 +59,7 @@ public class Ab3Tests {
 	    assertEquals(1, test.getWidth(td));
 
 	    td = test.decomposeExact(graph4);
+
 	    assertTrue(test.isValid(td));
 	    assertEquals(2, test.getWidth(td));
     }
