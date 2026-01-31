@@ -6,6 +6,7 @@ import ab3.TreeDecomposition;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Random;
 
 public class Ab3Impl implements Ab3 {
 
@@ -205,8 +206,34 @@ public class Ab3Impl implements Ab3 {
 
 	@Override
 	public TreeDecomposition decomposeRandom(boolean[][] graph, int samples) {
-		// TODO Auto-generated method stub
-		return null;
+
+		TreeDecomposition res = null;
+		int bestWidth = Integer.MAX_VALUE;
+
+		int[] order = new int[graph.length];
+		for (int i = 0; i < order.length; i++) {
+			order[i]= i;
+		}
+
+		Random rand = new Random();
+
+		for(int sample=0; sample<samples; sample++) {
+			for (int i = graph.length - 1; i > 0; i--) {
+				int j = rand.nextInt(i + 1);
+				int tmp = order[i];
+				order[i] = order[j];
+				order[j] = tmp;
+			}
+			TreeDecomposition td = buildFromOrder(graph, order);
+			int width = getWidth(td);
+
+			//beste Ergebnis
+			if (width < bestWidth) {
+				bestWidth = width;
+				res = td;
+			}
+		}
+		return res;
 	}
 
 	@Override
